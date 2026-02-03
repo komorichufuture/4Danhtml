@@ -218,6 +218,46 @@
             padding: 20px;
         }
 
+        /* 画像+テキスト用スタイル */
+        .combined-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 90%;
+            height: 90%;
+            gap: 15px;
+        }
+
+        .combined-content.text-top {
+            flex-direction: column;
+        }
+
+        .combined-content.text-bottom {
+            flex-direction: column;
+        }
+
+        .combined-content .images-container {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .combined-content .images-container img {
+            flex: 1;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .combined-content .text-content {
+            flex-shrink: 0;
+            padding: 10px 20px;
+        }
+
         .content-type-selector {
             margin-bottom: 10px;
         }
@@ -292,8 +332,9 @@
                     <div class="content-type-selector">
                         <label>コンテンツタイプ</label>
                         <select id="contentType${num}" onchange="changeContentType(${num})">
-                            <option value="images">画像</option>
-                            <option value="text">テキスト</option>
+                            <option value="images">画像のみ</option>
+                            <option value="text">テキストのみ</option>
+                            <option value="combined">画像+テキスト</option>
                         </select>
                     </div>
                     <div id="imageControls${num}">
@@ -318,6 +359,33 @@
                             <input type="color" id="textColor${num}" value="#000000">
                         </div>
                     </div>
+                    <div id="combinedControls${num}" style="display: none;">
+                        <div class="input-group">
+                            <label>テキスト位置</label>
+                            <select id="textPosition${num}" onchange="updatePreview()">
+                                <option value="top">画像の上</option>
+                                <option value="bottom">画像の下</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>画像を追加</label>
+                            <input type="file" id="imgCombined${num}" accept="image/*" multiple>
+                        </div>
+                        <div class="image-preview-container" id="imagePreviewCombined${num}"></div>
+                        <button class="clear-images-btn" onclick="clearImagesCombined(${num})">すべての画像をクリア</button>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label>テキスト</label>
+                            <input type="text" id="textCombined${num}" placeholder="テキストを入力">
+                        </div>
+                        <div class="input-group">
+                            <label>フォントサイズ</label>
+                            <input type="number" id="fontSizeCombined${num}" value="24" min="10" max="100">
+                        </div>
+                        <div class="input-group">
+                            <label>文字色</label>
+                            <input type="color" id="textColorCombined${num}" value="#000000">
+                        </div>
+                    </div>
                 `;
                 container.appendChild(sectionDiv);
 
@@ -325,6 +393,7 @@
                 setTimeout(() => {
                     document.getElementById(`bg${num}`).addEventListener('input', () => updatePreview());
                     
+                    // 画像のみモード
                     document.getElementById(`img${num}`).addEventListener('change', (e) => {
                         const files = Array.from(e.target.files);
                         files.forEach(file => {
@@ -339,11 +408,32 @@
                         e.target.value = '';
                     });
                     
+                    // テキストのみモード
                     document.getElementById(`text${num}`).addEventListener('input', () => updatePreview());
                     document.getElementById(`fontSize${num}`).addEventListener('input', () => updatePreview());
                     document.getElementById(`textColor${num}`).addEventListener('input', () => updatePreview());
                     
+                    // 画像+テキストモード
+                    document.getElementById(`imgCombined${num}`).addEventListener('change', (e) => {
+                        const files = Array.from(e.target.files);
+                        files.forEach(file => {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                imageData[num].push(event.target.result);
+                                updateImagePreviewsCombined(num);
+                                updatePreview();
+                            };
+                            reader.readAsDataURL(file);
+                        });
+                        e.target.value = '';
+                    });
+                    
+                    document.getElementById(`textCombined${num}`).addEventListener('input', () => updatePreview());
+                    document.getElementById(`fontSizeCombined${num}`).addEventListener('input', () => updatePreview());
+                    document.getElementById(`textColorCombined${num}`).addEventListener('input', () => updatePreview());
+                    
                     updateImagePreviews(num);
+                    updateImagePreviewsCombined(num);
                 }, 0);
             }
         }
@@ -374,14 +464,20 @@
             const type = document.getElementById(`contentType${num}`).value;
             const imageControls = document.getElementById(`imageControls${num}`);
             const textControls = document.getElementById(`textControls${num}`);
+            const combinedControls = document.getElementById(`combinedControls${num}`);
+            
+            imageControls.style.display = 'none';
+            textControls.style.display = 'none';
+            combinedControls.style.display = 'none';
             
             if (type === 'images') {
                 imageControls.style.display = 'block';
-                textControls.style.display = 'none';
-            } else {
-                imageControls.style.display = 'none';
+            } else if (type === 'text') {
                 textControls.style.display = 'block';
+            } else if (type === 'combined') {
+                combinedControls.style.display = 'block';
             }
+            
             updatePreview();
         }
 
@@ -411,9 +507,41 @@
             });
         }
 
+        function updateImagePreviewsCombined(num) {
+            const container = document.getElementById(`imagePreviewCombined${num}`);
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            if (!imageData[num]) return;
+            
+            imageData[num].forEach((src, index) => {
+                const item = document.createElement('div');
+                item.className = 'image-preview-item';
+                
+                const img = document.createElement('img');
+                img.src = src;
+                
+                const removeBtn = document.createElement('div');
+                removeBtn.className = 'remove-btn';
+                removeBtn.textContent = '×';
+                removeBtn.onclick = () => removeImageCombined(num, index);
+                
+                item.appendChild(img);
+                item.appendChild(removeBtn);
+                container.appendChild(item);
+            });
+        }
+
         function removeImage(num, index) {
             imageData[num].splice(index, 1);
             updateImagePreviews(num);
+            updatePreview();
+        }
+
+        function removeImageCombined(num, index) {
+            imageData[num].splice(index, 1);
+            updateImagePreviewsCombined(num);
             updatePreview();
         }
 
@@ -422,6 +550,15 @@
             if (confirm('このセクションのすべての画像を削除しますか?')) {
                 imageData[num] = [];
                 updateImagePreviews(num);
+                updatePreview();
+            }
+        }
+
+        function clearImagesCombined(num) {
+            if (!imageData[num] || imageData[num].length === 0) return;
+            if (confirm('このセクションのすべての画像を削除しますか?')) {
+                imageData[num] = [];
+                updateImagePreviewsCombined(num);
                 updatePreview();
             }
         }
@@ -468,6 +605,55 @@
                         textDiv.textContent = text;
                         section.appendChild(textDiv);
                     }
+                } else if (contentType === 'combined') {
+                    const textInput = document.getElementById(`textCombined${num}`);
+                    const textPositionInput = document.getElementById(`textPosition${num}`);
+                    
+                    if (!textInput || !textPositionInput) return;
+                    
+                    const text = textInput.value;
+                    const textPosition = textPositionInput.value;
+                    const fontSize = document.getElementById(`fontSizeCombined${num}`).value;
+                    const textColor = document.getElementById(`textColorCombined${num}`).value;
+                    
+                    const combinedContainer = document.createElement('div');
+                    combinedContainer.className = `combined-content text-${textPosition}`;
+                    
+                    // テキストを先に追加（位置が'top'の場合）
+                    if (textPosition === 'top' && text) {
+                        const textDiv = document.createElement('div');
+                        textDiv.className = 'text-content';
+                        textDiv.style.fontSize = fontSize + 'px';
+                        textDiv.style.color = textColor;
+                        textDiv.textContent = text;
+                        combinedContainer.appendChild(textDiv);
+                    }
+                    
+                    // 画像を追加
+                    if (imageData[num] && imageData[num].length > 0) {
+                        const imagesContainer = document.createElement('div');
+                        imagesContainer.className = 'images-container';
+                        
+                        imageData[num].forEach(src => {
+                            const img = document.createElement('img');
+                            img.src = src;
+                            imagesContainer.appendChild(img);
+                        });
+                        
+                        combinedContainer.appendChild(imagesContainer);
+                    }
+                    
+                    // テキストを後に追加（位置が'bottom'の場合）
+                    if (textPosition === 'bottom' && text) {
+                        const textDiv = document.createElement('div');
+                        textDiv.className = 'text-content';
+                        textDiv.style.fontSize = fontSize + 'px';
+                        textDiv.style.color = textColor;
+                        textDiv.textContent = text;
+                        combinedContainer.appendChild(textDiv);
+                    }
+                    
+                    section.appendChild(combinedContainer);
                 }
             }
         }
@@ -521,6 +707,37 @@
             text-align: center;
             padding: 20px;
         }
+        
+        .combined-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 90%;
+            height: 90%;
+            gap: 15px;
+        }
+        
+        .combined-content .images-container {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .combined-content .images-container img {
+            flex: 1;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .combined-content .text-content {
+            flex-shrink: 0;
+            padding: 10px 20px;
+        }
     </style>
 </head>
 <body>
@@ -545,6 +762,34 @@
                         const textColor = document.getElementById(`textColor${num}`).value;
                         html += `        <div class="text-content" style="font-size: ${fontSize}px; color: ${textColor};">${text}</div>\n`;
                     }
+                } else if (contentType === 'combined') {
+                    const text = document.getElementById(`textCombined${num}`).value;
+                    const textPosition = document.getElementById(`textPosition${num}`).value;
+                    const fontSize = document.getElementById(`fontSizeCombined${num}`).value;
+                    const textColor = document.getElementById(`textColorCombined${num}`).value;
+                    
+                    html += `        <div class="combined-content">\n`;
+                    
+                    // テキストを先に追加（位置が'top'の場合）
+                    if (textPosition === 'top' && text) {
+                        html += `            <div class="text-content" style="font-size: ${fontSize}px; color: ${textColor};">${text}</div>\n`;
+                    }
+                    
+                    // 画像を追加
+                    if (imageData[num] && imageData[num].length > 0) {
+                        html += `            <div class="images-container">\n`;
+                        imageData[num].forEach((src, index) => {
+                            html += `                <img src="${src}" alt="Section ${num} Image ${index + 1}">\n`;
+                        });
+                        html += `            </div>\n`;
+                    }
+                    
+                    // テキストを後に追加（位置が'bottom'の場合）
+                    if (textPosition === 'bottom' && text) {
+                        html += `            <div class="text-content" style="font-size: ${fontSize}px; color: ${textColor};">${text}</div>\n`;
+                    }
+                    
+                    html += `        </div>\n`;
                 }
                 
                 html += `    </div>\n`;
