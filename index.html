@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4段構成Webページエディタ - 複数画像対応</title>
+    <title>可変段組Webページエディタ</title>
     <style>
         * {
             margin: 0;
@@ -29,6 +29,30 @@
             flex: 1;
             background: #ecf0f1;
             overflow-y: auto;
+        }
+
+        .section-count-selector {
+            margin-bottom: 25px;
+            background: #34495e;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .section-count-selector h3 {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #3498db;
+        }
+
+        .section-count-selector select {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background: #1a252f;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
         }
 
         .section-editor {
@@ -148,14 +172,6 @@
             background: #c0392b;
         }
 
-        .add-image-btn {
-            background: #16a085;
-        }
-
-        .add-image-btn:hover {
-            background: #138d75;
-        }
-
         .clear-images-btn {
             background: #e67e22;
             margin-top: 5px;
@@ -173,7 +189,6 @@
         }
 
         .section {
-            height: 25vh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -219,207 +234,141 @@
 </head>
 <body>
     <div class="editor-panel">
-        <h2 style="margin-bottom: 20px; color: #3498db;">4段構成エディタ</h2>
+        <h2 style="margin-bottom: 20px; color: #3498db;">可変段組エディタ</h2>
         
-        <div class="section-editor">
-            <h3>最上部セクション</h3>
-            <div class="input-group">
-                <label>背景色</label>
-                <input type="color" id="bg1" value="#ffffff">
-            </div>
-            <div class="content-type-selector">
-                <label>コンテンツタイプ</label>
-                <select id="contentType1" onchange="changeContentType(1)">
-                    <option value="images">画像</option>
-                    <option value="text">テキスト</option>
-                </select>
-            </div>
-            <div id="imageControls1">
-                <div class="input-group">
-                    <label>画像を追加</label>
-                    <input type="file" id="img1" accept="image/*" multiple>
-                </div>
-                <div class="image-preview-container" id="imagePreview1"></div>
-                <button class="clear-images-btn" onclick="clearImages(1)">すべての画像をクリア</button>
-            </div>
-            <div id="textControls1" style="display: none;">
-                <div class="input-group">
-                    <label>テキスト</label>
-                    <input type="text" id="text1" placeholder="テキストを入力">
-                </div>
-                <div class="input-group">
-                    <label>フォントサイズ</label>
-                    <input type="number" id="fontSize1" value="24" min="10" max="100">
-                </div>
-                <div class="input-group">
-                    <label>文字色</label>
-                    <input type="color" id="textColor1" value="#000000">
-                </div>
-            </div>
+        <div class="section-count-selector">
+            <h3>段組数を選択</h3>
+            <select id="sectionCount" onchange="changeSectionCount()">
+                <option value="2">2段組</option>
+                <option value="3">3段組</option>
+                <option value="4" selected>4段組</option>
+                <option value="5">5段組</option>
+            </select>
         </div>
 
-        <div class="section-editor">
-            <h3>二段目セクション</h3>
-            <div class="input-group">
-                <label>背景色</label>
-                <input type="color" id="bg2" value="#f0f0f0">
-            </div>
-            <div class="content-type-selector">
-                <label>コンテンツタイプ</label>
-                <select id="contentType2" onchange="changeContentType(2)">
-                    <option value="images">画像</option>
-                    <option value="text">テキスト</option>
-                </select>
-            </div>
-            <div id="imageControls2">
-                <div class="input-group">
-                    <label>画像を追加</label>
-                    <input type="file" id="img2" accept="image/*" multiple>
-                </div>
-                <div class="image-preview-container" id="imagePreview2"></div>
-                <button class="clear-images-btn" onclick="clearImages(2)">すべての画像をクリア</button>
-            </div>
-            <div id="textControls2" style="display: none;">
-                <div class="input-group">
-                    <label>テキスト</label>
-                    <input type="text" id="text2" placeholder="テキストを入力">
-                </div>
-                <div class="input-group">
-                    <label>フォントサイズ</label>
-                    <input type="number" id="fontSize2" value="24" min="10" max="100">
-                </div>
-                <div class="input-group">
-                    <label>文字色</label>
-                    <input type="color" id="textColor2" value="#000000">
-                </div>
-            </div>
-        </div>
-
-        <div class="section-editor">
-            <h3>三段目セクション</h3>
-            <div class="input-group">
-                <label>背景色</label>
-                <input type="color" id="bg3" value="#e0e0e0">
-            </div>
-            <div class="content-type-selector">
-                <label>コンテンツタイプ</label>
-                <select id="contentType3" onchange="changeContentType(3)">
-                    <option value="images">画像</option>
-                    <option value="text">テキスト</option>
-                </select>
-            </div>
-            <div id="imageControls3">
-                <div class="input-group">
-                    <label>画像を追加</label>
-                    <input type="file" id="img3" accept="image/*" multiple>
-                </div>
-                <div class="image-preview-container" id="imagePreview3"></div>
-                <button class="clear-images-btn" onclick="clearImages(3)">すべての画像をクリア</button>
-            </div>
-            <div id="textControls3" style="display: none;">
-                <div class="input-group">
-                    <label>テキスト</label>
-                    <input type="text" id="text3" placeholder="テキストを入力">
-                </div>
-                <div class="input-group">
-                    <label>フォントサイズ</label>
-                    <input type="number" id="fontSize3" value="24" min="10" max="100">
-                </div>
-                <div class="input-group">
-                    <label>文字色</label>
-                    <input type="color" id="textColor3" value="#000000">
-                </div>
-            </div>
-        </div>
-
-        <div class="section-editor">
-            <h3>最下部セクション</h3>
-            <div class="input-group">
-                <label>背景色</label>
-                <input type="color" id="bg4" value="#d0d0d0">
-            </div>
-            <div class="content-type-selector">
-                <label>コンテンツタイプ</label>
-                <select id="contentType4" onchange="changeContentType(4)">
-                    <option value="images">画像</option>
-                    <option value="text">テキスト</option>
-                </select>
-            </div>
-            <div id="imageControls4">
-                <div class="input-group">
-                    <label>画像を追加</label>
-                    <input type="file" id="img4" accept="image/*" multiple>
-                </div>
-                <div class="image-preview-container" id="imagePreview4"></div>
-                <button class="clear-images-btn" onclick="clearImages(4)">すべての画像をクリア</button>
-            </div>
-            <div id="textControls4" style="display: none;">
-                <div class="input-group">
-                    <label>テキスト</label>
-                    <input type="text" id="text4" placeholder="テキストを入力">
-                </div>
-                <div class="input-group">
-                    <label>フォントサイズ</label>
-                    <input type="number" id="fontSize4" value="24" min="10" max="100">
-                </div>
-                <div class="input-group">
-                    <label>文字色</label>
-                    <input type="color" id="textColor4" value="#000000">
-                </div>
-            </div>
-        </div>
+        <div id="sectionsContainer"></div>
 
         <button class="export-btn" onclick="exportHTML()">HTMLをエクスポート</button>
     </div>
 
     <div class="preview-panel">
-        <div class="preview-container">
-            <div class="section" id="section1"></div>
-            <div class="section" id="section2"></div>
-            <div class="section" id="section3"></div>
-            <div class="section" id="section4"></div>
-        </div>
+        <div class="preview-container" id="previewContainer"></div>
     </div>
 
     <script>
-        const sections = [1, 2, 3, 4];
-        const imageData = {
-            1: [],
-            2: [],
-            3: [],
-            4: []
-        };
+        let currentSectionCount = 4;
+        const imageData = {};
+        const sectionLabels = ['最上部', '二段目', '三段目', '四段目', '五段目'];
 
-        // 各セクションのイベントリスナーを設定
-        sections.forEach(num => {
-            // 背景色
-            document.getElementById(`bg${num}`).addEventListener('input', () => updatePreview());
-            
-            // 画像（複数対応）
-            document.getElementById(`img${num}`).addEventListener('change', (e) => {
-                const files = Array.from(e.target.files);
-                files.forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        imageData[num].push(event.target.result);
-                        updateImagePreviews(num);
-                        updatePreview();
-                    };
-                    reader.readAsDataURL(file);
-                });
-                // ファイル選択をリセット
-                e.target.value = '';
-            });
-            
-            // テキスト
-            document.getElementById(`text${num}`).addEventListener('input', () => updatePreview());
-            
-            // フォントサイズ
-            document.getElementById(`fontSize${num}`).addEventListener('input', () => updatePreview());
-            
-            // 文字色
-            document.getElementById(`textColor${num}`).addEventListener('input', () => updatePreview());
-        });
+        function initializeData(count) {
+            for (let i = 1; i <= count; i++) {
+                if (!imageData[i]) {
+                    imageData[i] = [];
+                }
+            }
+        }
+
+        function changeSectionCount() {
+            const newCount = parseInt(document.getElementById('sectionCount').value);
+            currentSectionCount = newCount;
+            initializeData(newCount);
+            renderEditor();
+            renderPreview();
+        }
+
+        function renderEditor() {
+            const container = document.getElementById('sectionsContainer');
+            container.innerHTML = '';
+
+            for (let num = 1; num <= currentSectionCount; num++) {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'section-editor';
+                sectionDiv.innerHTML = `
+                    <h3>${sectionLabels[num - 1]}セクション</h3>
+                    <div class="input-group">
+                        <label>背景色</label>
+                        <input type="color" id="bg${num}" value="${getDefaultBgColor(num)}">
+                    </div>
+                    <div class="content-type-selector">
+                        <label>コンテンツタイプ</label>
+                        <select id="contentType${num}" onchange="changeContentType(${num})">
+                            <option value="images">画像</option>
+                            <option value="text">テキスト</option>
+                        </select>
+                    </div>
+                    <div id="imageControls${num}">
+                        <div class="input-group">
+                            <label>画像を追加</label>
+                            <input type="file" id="img${num}" accept="image/*" multiple>
+                        </div>
+                        <div class="image-preview-container" id="imagePreview${num}"></div>
+                        <button class="clear-images-btn" onclick="clearImages(${num})">すべての画像をクリア</button>
+                    </div>
+                    <div id="textControls${num}" style="display: none;">
+                        <div class="input-group">
+                            <label>テキスト</label>
+                            <input type="text" id="text${num}" placeholder="テキストを入力">
+                        </div>
+                        <div class="input-group">
+                            <label>フォントサイズ</label>
+                            <input type="number" id="fontSize${num}" value="24" min="10" max="100">
+                        </div>
+                        <div class="input-group">
+                            <label>文字色</label>
+                            <input type="color" id="textColor${num}" value="#000000">
+                        </div>
+                    </div>
+                `;
+                container.appendChild(sectionDiv);
+
+                // イベントリスナーを設定
+                setTimeout(() => {
+                    document.getElementById(`bg${num}`).addEventListener('input', () => updatePreview());
+                    
+                    document.getElementById(`img${num}`).addEventListener('change', (e) => {
+                        const files = Array.from(e.target.files);
+                        files.forEach(file => {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                imageData[num].push(event.target.result);
+                                updateImagePreviews(num);
+                                updatePreview();
+                            };
+                            reader.readAsDataURL(file);
+                        });
+                        e.target.value = '';
+                    });
+                    
+                    document.getElementById(`text${num}`).addEventListener('input', () => updatePreview());
+                    document.getElementById(`fontSize${num}`).addEventListener('input', () => updatePreview());
+                    document.getElementById(`textColor${num}`).addEventListener('input', () => updatePreview());
+                    
+                    updateImagePreviews(num);
+                }, 0);
+            }
+        }
+
+        function renderPreview() {
+            const container = document.getElementById('previewContainer');
+            container.innerHTML = '';
+
+            const sectionHeight = `${100 / currentSectionCount}vh`;
+
+            for (let num = 1; num <= currentSectionCount; num++) {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'section';
+                sectionDiv.id = `section${num}`;
+                sectionDiv.style.height = sectionHeight;
+                container.appendChild(sectionDiv);
+            }
+
+            updatePreview();
+        }
+
+        function getDefaultBgColor(num) {
+            const colors = ['#ffffff', '#f0f0f0', '#e0e0e0', '#d0d0d0', '#c0c0c0'];
+            return colors[num - 1] || '#ffffff';
+        }
 
         function changeContentType(num) {
             const type = document.getElementById(`contentType${num}`).value;
@@ -438,7 +387,11 @@
 
         function updateImagePreviews(num) {
             const container = document.getElementById(`imagePreview${num}`);
+            if (!container) return;
+            
             container.innerHTML = '';
+            
+            if (!imageData[num]) return;
             
             imageData[num].forEach((src, index) => {
                 const item = document.createElement('div');
@@ -465,7 +418,7 @@
         }
 
         function clearImages(num) {
-            if (imageData[num].length === 0) return;
+            if (!imageData[num] || imageData[num].length === 0) return;
             if (confirm('このセクションのすべての画像を削除しますか?')) {
                 imageData[num] = [];
                 updateImagePreviews(num);
@@ -474,15 +427,22 @@
         }
 
         function updatePreview() {
-            sections.forEach(num => {
+            for (let num = 1; num <= currentSectionCount; num++) {
                 const section = document.getElementById(`section${num}`);
-                const bgColor = document.getElementById(`bg${num}`).value;
-                const contentType = document.getElementById(`contentType${num}`).value;
+                if (!section) continue;
+                
+                const bgColorInput = document.getElementById(`bg${num}`);
+                const contentTypeInput = document.getElementById(`contentType${num}`);
+                
+                if (!bgColorInput || !contentTypeInput) continue;
+                
+                const bgColor = bgColorInput.value;
+                const contentType = contentTypeInput.value;
                 
                 section.style.backgroundColor = bgColor;
                 section.innerHTML = '';
                 
-                if (contentType === 'images' && imageData[num].length > 0) {
+                if (contentType === 'images' && imageData[num] && imageData[num].length > 0) {
                     const container = document.createElement('div');
                     container.className = 'images-container';
                     
@@ -494,7 +454,10 @@
                     
                     section.appendChild(container);
                 } else if (contentType === 'text') {
-                    const text = document.getElementById(`text${num}`).value;
+                    const textInput = document.getElementById(`text${num}`);
+                    if (!textInput) return;
+                    
+                    const text = textInput.value;
                     if (text) {
                         const fontSize = document.getElementById(`fontSize${num}`).value;
                         const textColor = document.getElementById(`textColor${num}`).value;
@@ -506,16 +469,18 @@
                         section.appendChild(textDiv);
                     }
                 }
-            });
+            }
         }
 
         function exportHTML() {
+            const sectionHeight = `${100 / currentSectionCount}vh`;
+            
             let html = `<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4段構成Webページ</title>
+    <title>${currentSectionCount}段構成Webページ</title>
     <style>
         * {
             margin: 0;
@@ -528,7 +493,7 @@
         }
         
         .section {
-            height: 25vh;
+            height: ${sectionHeight};
             display: flex;
             align-items: center;
             justify-content: center;
@@ -561,13 +526,13 @@
 <body>
 `;
 
-            sections.forEach(num => {
+            for (let num = 1; num <= currentSectionCount; num++) {
                 const bgColor = document.getElementById(`bg${num}`).value;
                 const contentType = document.getElementById(`contentType${num}`).value;
                 
                 html += `    <div class="section" style="background-color: ${bgColor};">\n`;
                 
-                if (contentType === 'images' && imageData[num].length > 0) {
+                if (contentType === 'images' && imageData[num] && imageData[num].length > 0) {
                     html += `        <div class="images-container">\n`;
                     imageData[num].forEach((src, index) => {
                         html += `            <img src="${src}" alt="Section ${num} Image ${index + 1}">\n`;
@@ -583,7 +548,7 @@
                 }
                 
                 html += `    </div>\n`;
-            });
+            }
 
             html += `</body>
 </html>`;
@@ -593,13 +558,15 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'webpage.html';
+            a.download = `webpage-${currentSectionCount}sections.html`;
             a.click();
             URL.revokeObjectURL(url);
         }
 
-        // 初期プレビュー
-        updatePreview();
+        // 初期化
+        initializeData(currentSectionCount);
+        renderEditor();
+        renderPreview();
     </script>
 </body>
 </html>
