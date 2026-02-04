@@ -270,11 +270,73 @@
             border-radius: 4px;
             width: 100%;
         }
+
+        /* リンク設定・選択ハイライト */
+        .link-panel {
+            margin-bottom: 25px;
+            background: #34495e;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .link-panel h3 {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #e67e22;
+        }
+        .hint {
+            font-size: 11px;
+            color: #bdc3c7;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+        .selected-outline {
+            outline: 3px dashed #e67e22;
+            outline-offset: 4px;
+        }
+        .link-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+        .link-wrapper img {
+            flex: 1;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            cursor: pointer;
+        }
+        .text-link {
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+        }
+
     </style>
 </head>
 <body>
     <div class="editor-panel">
         <h2 style="margin-bottom: 20px; color: #3498db;">可変段組エディタ</h2>
+
+        <div class="link-panel">
+            <h3>リンク（クリックしたオブジェクトに付与）</h3>
+            <div class="hint">プレビュー側で画像/テキストをクリック → 下のURLを設定 →「選択に適用」。<br>編集中はクリックしても移動しません。</div>
+            <div class="input-group">
+                <label>URL</label>
+                <input type="text" id="linkUrl" placeholder="https://... または /path">
+            </div>
+            <div class="input-group">
+                <label>ターゲット</label>
+                <select id="linkTarget">
+                    <option value="_self">同じタブ</option>
+                    <option value="_blank">新しいタブ</option>
+                </select>
+            </div>
+            <button onclick="applyLinkToSelected()">選択に適用</button>
+            <button onclick="clearLinkFromSelected()" style="background:#e74c3c; margin-top:8px;">選択のリンクを削除</button>
+        </div>
+
         
         <div class="section-count-selector">
             <h3>段組数を選択</h3>
@@ -300,11 +362,87 @@
         const imageData = {};
         const sectionLabels = ['最上部', '二段目', '三段目', '四段目', '五段目'];
 
+        // リンク情報: linkData[sectionNum].images[index] / linkData[sectionNum].text / linkData[sectionNum].combinedText / linkData[sectionNum].combinedImages[index]
+        const linkData = {};
+        let selectedObject = null; // { section: number, kind: 'image'|'text'|'combinedImage'|'combinedText', index?: number, el?: HTMLElement }
+
+        function ensureLinkData(num) {
+            if (!linkData[num]) {
+                linkData[num] = { images: [], text: null, combinedImages: [], combinedText: null };
+            }
+        }
+
+        function getLinkInfo(obj) {
+            if (!obj) return null;
+            ensureLinkData(obj.section);
+            const d = linkData[obj.section];
+            if (obj.kind === 'image') return d.images[obj.index] || null;
+            if (obj.kind === 'text') return d.text || null;
+            if (obj.kind === 'combinedImage') return d.combinedImages[obj.index] || null;
+            if (obj.kind === 'combinedText') return d.combinedText || null;
+            return null;
+        }
+
+        function setLinkInfo(obj, info) {
+            ensureLinkData(obj.section);
+            const d = linkData[obj.section];
+            if (obj.kind === 'image') d.images[obj.index] = info;
+            else if (obj.kind === 'text') d.text = info;
+            else if (obj.kind === 'combinedImage') d.combinedImages[obj.index] = info;
+            else if (obj.kind === 'combinedText') d.combinedText = info;
+        }
+
+        function selectObject(obj) {
+            // 旧選択のハイライト解除
+            if (selectedObject && selectedObject.el) {
+                selectedObject.el.classList.remove('selected-outline');
+            }
+            selectedObject = obj;
+
+            if (selectedObject && selectedObject.el) {
+                selectedObject.el.classList.add('selected-outline');
+            }
+
+            // UIへ反映
+            const info = getLinkInfo(selectedObject);
+            document.getElementById('linkUrl').value = info?.href || '';
+            document.getElementById('linkTarget').value = info?.target || '_self';
+        }
+
+        function applyLinkToSelected() {
+            if (!selectedObject) {
+                alert('先にプレビュー側で、リンクを付けたい画像/テキストをクリックして選択してください。');
+                return;
+            }
+            const href = document.getElementById('linkUrl').value.trim();
+            const target = document.getElementById('linkTarget').value;
+
+            if (!href) {
+                alert('URLが空です。削除したい場合は「選択のリンクを削除」を使ってください。');
+                return;
+            }
+            setLinkInfo(selectedObject, { href, target });
+            updatePreview();
+        }
+
+        function clearLinkFromSelected() {
+            if (!selectedObject) {
+                alert('先にプレビュー側で、リンクを外したい画像/テキストをクリックして選択してください。');
+                return;
+            }
+            setLinkInfo(selectedObject, null);
+            document.getElementById('linkUrl').value = '';
+            document.getElementById('linkTarget').value = '_self';
+            updatePreview();
+        }
+
+
         function initializeData(count) {
             for (let i = 1; i <= count; i++) {
                 if (!imageData[i]) {
                     imageData[i] = [];
                 }
+                ensureLinkData(i);
             }
         }
 
@@ -583,10 +721,31 @@
                     const container = document.createElement('div');
                     container.className = 'images-container';
                     
-                    imageData[num].forEach(src => {
+                    imageData[num].forEach((src, index) => {
+                        const info = (linkData[num] && linkData[num].images) ? (linkData[num].images[index] || null) : null;
+
+                        const a = document.createElement('a');
+                        a.className = 'link-wrapper';
+                        a.href = info?.href || '#';
+                        a.target = info?.target || '_self';
+                        a.addEventListener('click', (e) => {
+                            // 編集中は移動させない
+                            e.preventDefault();
+                            e.stopPropagation();
+                            selectObject({ section: num, kind: 'image', index, el: a });
+                        });
+
                         const img = document.createElement('img');
                         img.src = src;
-                        container.appendChild(img);
+
+                        a.appendChild(img);
+                        container.appendChild(a);
+
+                        // 選択状態の復元
+                        if (selectedObject && selectedObject.section === num && selectedObject.kind === 'image' && selectedObject.index === index) {
+                            a.classList.add('selected-outline');
+                            selectedObject.el = a;
+                        }
                     });
                     
                     section.appendChild(container);
@@ -598,12 +757,31 @@
                     if (text) {
                         const fontSize = document.getElementById(`fontSize${num}`).value;
                         const textColor = document.getElementById(`textColor${num}`).value;
+                        const info = linkData[num]?.text || null;
+
+                        const a = document.createElement('a');
+                        a.className = 'text-link';
+                        a.href = info?.href || '#';
+                        a.target = info?.target || '_self';
+                        a.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            selectObject({ section: num, kind: 'text', el: a });
+                        });
+
                         const textDiv = document.createElement('div');
                         textDiv.className = 'text-content';
                         textDiv.style.fontSize = fontSize + 'px';
                         textDiv.style.color = textColor;
                         textDiv.textContent = text;
-                        section.appendChild(textDiv);
+
+                        a.appendChild(textDiv);
+                        section.appendChild(a);
+
+                        if (selectedObject && selectedObject.section === num && selectedObject.kind === 'text') {
+                            a.classList.add('selected-outline');
+                            selectedObject.el = a;
+                        }
                     }
                 } else if (contentType === 'combined') {
                     const textInput = document.getElementById(`textCombined${num}`);
@@ -621,12 +799,31 @@
                     
                     // テキストを先に追加（位置が'top'の場合）
                     if (textPosition === 'top' && text) {
+                        const info = linkData[num]?.combinedText || null;
+
+                        const a = document.createElement('a');
+                        a.className = 'text-link';
+                        a.href = info?.href || '#';
+                        a.target = info?.target || '_self';
+                        a.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            selectObject({ section: num, kind: 'combinedText', el: a });
+                        });
+
                         const textDiv = document.createElement('div');
                         textDiv.className = 'text-content';
                         textDiv.style.fontSize = fontSize + 'px';
                         textDiv.style.color = textColor;
                         textDiv.textContent = text;
-                        combinedContainer.appendChild(textDiv);
+
+                        a.appendChild(textDiv);
+                        combinedContainer.appendChild(a);
+
+                        if (selectedObject && selectedObject.section === num && selectedObject.kind === 'combinedText') {
+                            a.classList.add('selected-outline');
+                            selectedObject.el = a;
+                        }
                     }
                     
                     // 画像を追加
@@ -634,10 +831,29 @@
                         const imagesContainer = document.createElement('div');
                         imagesContainer.className = 'images-container';
                         
-                        imageData[num].forEach(src => {
+                        imageData[num].forEach((src, index) => {
+                            const info = (linkData[num] && linkData[num].combinedImages) ? (linkData[num].combinedImages[index] || null) : null;
+
+                            const a = document.createElement('a');
+                            a.className = 'link-wrapper';
+                            a.href = info?.href || '#';
+                            a.target = info?.target || '_self';
+                            a.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                selectObject({ section: num, kind: 'combinedImage', index, el: a });
+                            });
+
                             const img = document.createElement('img');
                             img.src = src;
-                            imagesContainer.appendChild(img);
+
+                            a.appendChild(img);
+                            imagesContainer.appendChild(a);
+
+                            if (selectedObject && selectedObject.section === num && selectedObject.kind === 'combinedImage' && selectedObject.index === index) {
+                                a.classList.add('selected-outline');
+                                selectedObject.el = a;
+                            }
                         });
                         
                         combinedContainer.appendChild(imagesContainer);
@@ -645,12 +861,31 @@
                     
                     // テキストを後に追加（位置が'bottom'の場合）
                     if (textPosition === 'bottom' && text) {
+                        const info = linkData[num]?.combinedText || null;
+
+                        const a = document.createElement('a');
+                        a.className = 'text-link';
+                        a.href = info?.href || '#';
+                        a.target = info?.target || '_self';
+                        a.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            selectObject({ section: num, kind: 'combinedText', el: a });
+                        });
+
                         const textDiv = document.createElement('div');
                         textDiv.className = 'text-content';
                         textDiv.style.fontSize = fontSize + 'px';
                         textDiv.style.color = textColor;
                         textDiv.textContent = text;
-                        combinedContainer.appendChild(textDiv);
+
+                        a.appendChild(textDiv);
+                        combinedContainer.appendChild(a);
+
+                        if (selectedObject && selectedObject.section === num && selectedObject.kind === 'combinedText') {
+                            a.classList.add('selected-outline');
+                            selectedObject.el = a;
+                        }
                     }
                     
                     section.appendChild(combinedContainer);
@@ -702,6 +937,19 @@
             max-height: 100%;
             object-fit: contain;
         }
+
+        .link-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+
+        .text-link {
+            text-decoration: none;
+            display: inline-block;
+        }
         
         .text-content {
             text-align: center;
@@ -738,6 +986,49 @@
             flex-shrink: 0;
             padding: 10px 20px;
         }
+
+        /* リンク設定・選択ハイライト */
+        .link-panel {
+            margin-bottom: 25px;
+            background: #34495e;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .link-panel h3 {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #e67e22;
+        }
+        .hint {
+            font-size: 11px;
+            color: #bdc3c7;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+        .selected-outline {
+            outline: 3px dashed #e67e22;
+            outline-offset: 4px;
+        }
+        .link-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+        .link-wrapper img {
+            flex: 1;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            cursor: pointer;
+        }
+        .text-link {
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+        }
+
     </style>
 </head>
 <body>
@@ -752,7 +1043,12 @@
                 if (contentType === 'images' && imageData[num] && imageData[num].length > 0) {
                     html += `        <div class="images-container">\n`;
                     imageData[num].forEach((src, index) => {
-                        html += `            <img src="${src}" alt="Section ${num} Image ${index + 1}">\n`;
+                        const info = (linkData[num] && linkData[num].images) ? (linkData[num].images[index] || null) : null;
+                        if (info && info.href) {
+                            html += `            <a class="link-wrapper" href="${info.href}" target="${info.target || '_self'}"><img src="${src}" alt="Section ${num} Image ${index + 1}"></a>\n`;
+                        } else {
+                            html += `            <img src="${src}" alt="Section ${num} Image ${index + 1}">\n`;
+                        }
                     });
                     html += `        </div>\n`;
                 } else if (contentType === 'text') {
@@ -760,7 +1056,12 @@
                     if (text) {
                         const fontSize = document.getElementById(`fontSize${num}`).value;
                         const textColor = document.getElementById(`textColor${num}`).value;
-                        html += `        <div class="text-content" style="font-size: ${fontSize}px; color: ${textColor};">${text}</div>\n`;
+                        const info = linkData[num]?.text || null;
+                        if (info && info.href) {
+                            html += `        <a class="text-link" href="${info.href}" target="${info.target || '_self'}"><div class="text-content" style="font-size: ${fontSize}px; color: ${textColor};">${text}</div></a>\n`;
+                        } else {
+                            html += `        <div class="text-content" style="font-size: ${fontSize}px; color: ${textColor};">${text}</div>\n`;
+                        }
                     }
                 } else if (contentType === 'combined') {
                     const text = document.getElementById(`textCombined${num}`).value;
@@ -772,21 +1073,36 @@
                     
                     // テキストを先に追加（位置が'top'の場合）
                     if (textPosition === 'top' && text) {
-                        html += `            <div class="text-content" style="font-size: ${fontSize}px; color: ${textColor};">${text}</div>\n`;
+                        const info = linkData[num]?.combinedText || null;
+                        if (info && info.href) {
+                            html += `            <a class="text-link" href="${info.href}" target="${info.target || '_self'}"><div class="text-content" style="font-size: ${fontSize}px; color: ${textColor};">${text}</div></a>\n`;
+                        } else {
+                            html += `            <div class="text-content" style="font-size: ${fontSize}px; color: ${textColor};">${text}</div>\n`;
+                        }
                     }
                     
                     // 画像を追加
                     if (imageData[num] && imageData[num].length > 0) {
                         html += `            <div class="images-container">\n`;
                         imageData[num].forEach((src, index) => {
-                            html += `                <img src="${src}" alt="Section ${num} Image ${index + 1}">\n`;
+                            const info = (linkData[num] && linkData[num].combinedImages) ? (linkData[num].combinedImages[index] || null) : null;
+                            if (info && info.href) {
+                                html += `                <a class="link-wrapper" href="${info.href}" target="${info.target || '_self'}"><img src="${src}" alt="Section ${num} Image ${index + 1}"></a>\n`;
+                            } else {
+                                html += `                <img src="${src}" alt="Section ${num} Image ${index + 1}">\n`;
+                            }
                         });
                         html += `            </div>\n`;
                     }
                     
                     // テキストを後に追加（位置が'bottom'の場合）
                     if (textPosition === 'bottom' && text) {
-                        html += `            <div class="text-content" style="font-size: ${fontSize}px; color: ${textColor};">${text}</div>\n`;
+                        const info = linkData[num]?.combinedText || null;
+                        if (info && info.href) {
+                            html += `            <a class="text-link" href="${info.href}" target="${info.target || '_self'}"><div class="text-content" style="font-size: ${fontSize}px; color: ${textColor};">${text}</div></a>\n`;
+                        } else {
+                            html += `            <div class="text-content" style="font-size: ${fontSize}px; color: ${textColor};">${text}</div>\n`;
+                        }
                     }
                     
                     html += `        </div>\n`;
